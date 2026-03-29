@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Padel Manager Pro</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- Mantener tu estructura HTML actual, pero reemplazar:
+       1. innerHTML por Sanitizer.html()
+       2. Lógica de puntuación por ScoringEngine
+       3. Eliminar "Custom" del selector de formatos -->
+  <div id="app">
+    <!-- Ejemplo de selector de formatos (sin "Custom") -->
+    <select id="f-format">
+      <option value="elimination">Eliminación</option>
+      <option value="league">Liga</option>
+      <option value="groups">Grupos</option>
+      <option value="americano">Americano</option>
+      <option value="mexicano">Mexicano</option>
+      <option value="swiss">Suizo</option>
+    </select>
+
+    <!-- Ejemplo de selector de sets (con "Custom") -->
+    <select id="f-settype">
+      <option value="normal">Normal (6 games)</option>
+      <option value="short">Short (4 games)</option>
+      <option value="pro">Pro (8 games)</option>
+      <option value="champions">Champions (2 sets + Super TB)</option>
+      <option value="custom">Custom</option>
+    </select>
+  </div>
+
+  <!-- Importar módulos -->
+  <script type="module">
+    import Sanitizer from './js/core/Sanitizer.js';
+    import ScoringEngine from './js/core/ScoringEngine.js';
+    import VersionedStorage from './js/core/VersionedStorage.js';
+    import AmericanoFormat from './js/formats/Americano.js';
+    // ... (importar todos los módulos necesarios)
+
+    // Ejemplo de uso:
+    document.getElementById('team-name').innerHTML = Sanitizer.html(`<div>${teamName}</div>`);
+  </script>
+</body>
+</html>
