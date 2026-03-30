@@ -1,194 +1,234 @@
 /**
- * ============================================
- * SCORING ENGINE - SISTEMA DE PUNTUACIÓN MODULAR
- * ============================================
- * Maneja todas las reglas de puntuación según el tipo de set/tie-break
- * Versión: 2.0
+ * ScoringEngine.js - Sistema de Puntuación Modular
+ * Maneja todas las reglas de puntuación según configuración
  */
 
 const ScoringEngine = {
     /**
-     * Configuración de tipos de set
-     */
-    SET_CONFIGS: {
-        normal: { gamesToWin: 6, tiebreakAt: 6, setsToWin: 2, tiebreakPoints: 7 },
-        short: { gamesToWin: 4, tiebreakAt: 4, setsToWin: 2, tiebreakPoints: 7 },
-        pro: { gamesToWin: 8, tiebreakAt: 8, setsToWin: 1, tiebreakPoints: 10 },
-        champions: { gamesToWin: 6, tiebreakAt: 6, setsToWin: 2, tiebreakPoints: 10, superTiebreak: true },
-        custom: { gamesToWin: 6, tiebreakAt: 6, setsToWin: 2, tiebreakPoints: 7 }
-    },
-
-    /**
-     * Obtiene configuración según tipo seleccionado
+     * Obtiene configuración de scoring basada en el tipo seleccionado
      * @param {string} setType - Tipo de set (normal, short, pro, champions, custom)
-     * @param {object} customConfig - Configuración personalizada si aplica
-     * @returns {object} - Configuración completa
+     * @param {string} tiebreakType - Tipo de tie-break
+     * @param {number} customGames - Games personalizados (si aplica)
+     * @param {number} customTiebreak - Puntos tie-break personalizados (si aplica)
+     * @returns {object} - Configuración de scoring
      */
-    getConfig(setType, customConfig = {}) {
-        const base = { ...this.SET_CONFIGS[setType] } || { ...this.SET_CONFIGS.normal };
-        
-        if (setType === 'custom') {
-            base.gamesToWin = Math.max(1, Math.min(15, parseInt(customConfig.gamesPerSet) || 6));
-            base.tiebreakAt = base.gamesToWin;
-            base.tiebreakPoints = Math.max(5, Math.min(25, parseInt(customConfig.tiebreakPoints) || 7));
+    getConfig(setType, tiebreakType, customGames = 6, customTiebreak = 7) {
+        const config = {
+            gamesPerSet: 6,
+            tiebreakPoints: 7,
+            setsToWin: 2,
+            isProSet: false,
+            isChampions: false
+        };
+
+        // Mapeo directo del tipo de set seleccionado
+        switch (setType) {
+            case 'normal':
+                config.gamesPerSet = 6;
+                config.tiebreakPoints = 7;
+                config.setsToWin = 2;
+                break;
+            case 'short':
+                config.gamesPerSet = 4;
+                config.tiebreakPoints = 7;
+                config.setsToWin = 2;
+                break;
+            case 'pro':
+                config.gamesPerSet = 8;
+                config.tiebreakPoints = 10;
+                config.setsToWin = 1;
+                config.isProSet = true;
+                break;
+            case 'champions':
+                config.gamesPerSet = 6;
+                config.tiebreakPoints = 10;
+                config.setsToWin = 2;
+                config.isChampions = true;
+                break;
+            case 'custom':
+                config.gamesPerSet = Math.max(1, Math.min(15, customGames));
+                config.tiebreakPoints = Math.max(5, Math.min(25, customTiebreak));
+                config.setsToWin = 2;
+                break;
         }
-        
-        // Champions tiene reglas especiales
-        if (setType === 'champions') {
-            base.superTiebreak = true;
-            base.tiebreakPoints = 10;
+
+        // Override según tipo de tie-break
+        if (tiebreakType === 'match' || tiebreakType === 'champions') {
+            config.tiebreakPoints = 10;
+        } else if (tiebreakType === 'custom') {
+            config.tiebreakPoints = Math.max(5, Math.min(25, customTiebreak));
         }
-        
-        return base;
+
+        return config;
     },
 
     /**
      * Valida un set individual
-     * @param {number} score1 - Games del jugador 1
-     * @param {number} score2 - Games del jugador 2
-     * @param {object} config - Configuración del set
-     * @param {array} tiebreakScores - Puntos del tie-break [p1, p2] si aplica
-     * @returns {object} - { valid: boolean, error: string, winner: number|null }
+     * @param {number} score1 - Games jugador 1
+     * @param {number} score2 - Games jugador 2
+     * @param {object} config - Configuración de scoring
+     * @returns {object} - { valid: boolean, message: string, needsTiebreak: boolean }
      */
-    validateSet(score1, score2, config, tiebreakScores = null) {
-        const { gamesToWin, tiebreakAt, tiebreakPoints } = config;
-        const maxWithTB = gamesToWin + 1;
-        
-        // Set vacío es válido (pendiente)
+    validateSet(score1, score2, config) {
+        const { gamesPerSet, tiebreakPoints } = config;
+        const maxWithTB = gamesPerSet + 1;
+
+        // Score vacío es válido (set no completado)
         if (score1 === 0 && score2 === 0) {
-            return { valid: true, error: null, winner: null };
+            return { valid: true, message: '', needsTiebreak: false };
         }
-        
-        // Validar rango máximo
+
+        // Verificar máximo
         if (score1 > maxWithTB || score2 > maxWithTB) {
             return { 
                 valid: false, 
-                error: `Score inválido. Máximo ${maxWithTB} games (con tie-break)`,
-                winner: null 
+                message: `Máximo ${maxWithTB} games (con tie-break)`, 
+                needsTiebreak: false 
             };
         }
-        
-        // Verificar empate en límite de tie-break
-        if (score1 === gamesToWin && score2 === gamesToWin) {
-            if (!tiebreakScores || (tiebreakScores[0] === 0 && tiebreakScores[1] === 0)) {
-                return {
-                    valid: false,
-                    error: `Empate ${gamesToWin}-${gamesToWin}. Debes registrar tie-break (ej: 7-5) o ganar ${maxWithTB}-${gamesToWin}`,
-                    winner: null
-                };
-            }
-            
-            // Validar tie-break
-            const tbValid = this.validateTiebreak(tiebreakScores[0], tiebreakScores[1], tiebreakPoints);
-            if (!tbValid.valid) {
-                return tbValid;
-            }
-            
-            return { valid: true, error: null, winner: tiebreakScores[0] > tiebreakScores[1] ? 1 : 2 };
+
+        // Verificar empate en límite → requiere tie-break
+        if (score1 === gamesPerSet && score2 === gamesPerSet) {
+            return { valid: true, message: '', needsTiebreak: true };
         }
-        
-        // Validar diferencia de 2 games
-        const diff = Math.abs(score1 - score2);
+
+        // Verificar diferencia de 2 games si llegó al límite
         const maxScore = Math.max(score1, score2);
+        const diff = Math.abs(score1 - score2);
         
-        if (maxScore >= gamesToWin && maxScore < maxWithTB && diff < 2) {
-            return {
-                valid: false,
-                error: `Debe ganar por 2 games de diferencia o llegar a tie-break (${maxWithTB}-${gamesToWin})`,
-                winner: null
+        if (maxScore >= gamesPerSet && diff < 2 && maxScore <= gamesPerSet) {
+            return { 
+                valid: false, 
+                message: 'Debe ganar por 2 games o llegar a tie-break', 
+                needsTiebreak: false 
             };
         }
-        
-        // Determinar ganador
-        let winner = null;
-        if (score1 > score2) winner = 1;
-        else if (score2 > score1) winner = 2;
-        
-        return { valid: true, error: null, winner };
+
+        return { valid: true, message: '', needsTiebreak: false };
     },
 
     /**
      * Valida puntos de tie-break
-     * @param {number} p1 - Puntos jugador 1
-     * @param {number} p2 - Puntos jugador 2
-     * @param {number} pointsToWin - Puntos necesarios para ganar
-     * @returns {object} - { valid: boolean, error: string }
+     * @param {number} tb1 - Puntos jugador 1
+     * @param {number} tb2 - Puntos jugador 2
+     * @param {number} tiebreakPoints - Puntos necesarios para ganar
+     * @returns {object} - { valid: boolean, message: string }
      */
-    validateTiebreak(p1, p2, pointsToWin) {
-        if (p1 === 0 && p2 === 0) {
-            return { valid: true, error: null };
+    validateTiebreak(tb1, tb2, tiebreakPoints) {
+        if (tb1 === 0 && tb2 === 0) {
+            return { valid: false, message: 'Ingrese puntos de tie-break' };
         }
-        
-        const minToWin = pointsToWin;
-        const diff = Math.abs(p1 - p2);
-        
+
+        const diff = Math.abs(tb1 - tb2);
+        const maxTb = Math.max(tb1, tb2);
+
+        if (maxTb < tiebreakPoints) {
+            return { valid: false, message: `Debe llegar a ${tiebreakPoints} puntos` };
+        }
+
         if (diff < 2) {
-            return {
-                valid: false,
-                error: `Tie-Break inválido. Debe haber diferencia de 2 puntos (ej: ${pointsToWin}-5, ${pointsToWin + 2}-${pointsToWin})`
-            };
+            return { valid: false, message: 'Debe haber diferencia de 2 puntos' };
         }
-        
-        if (Math.max(p1, p2) < minToWin) {
-            return {
-                valid: false,
-                error: `Tie-Break inválido. Debe llegar a mínimo ${minToWin} puntos`
-            };
-        }
-        
-        return { valid: true, error: null };
+
+        return { valid: true, message: '' };
     },
 
     /**
-     * Determina si un partido tiene ganador
-     * @param {array} sets - Array de sets [[s1g1, s1g2], [s2g1, s2g2], ...]
-     * @param {object} config - Configuración del formato
-     * @returns {object} - { hasWinner: boolean, winner: number|null, setsWon: [number, number] }
+     * Determina ganador del set
+     * @param {array} set - [score1, score2, tb1?, tb2?]
+     * @param {object} config - Configuración de scoring
+     * @returns {number} - 1 si gana jugador 1, 2 si gana jugador 2, 0 si incompleto
      */
-    determineMatchWinner(sets, config) {
-        const setsToWin = config.setsToWin || 2;
-        const setsWon = [0, 0];
+    getSetWinner(set, config) {
+        if (!set || set.length < 2) return 0;
+        
+        const [s1, s2, tb1, tb2] = set;
+        const { gamesPerSet } = config;
+
+        // Si hay empate en games, usar tie-break
+        if (s1 === gamesPerSet && s2 === gamesPerSet) {
+            if (tb1 > tb2) return 1;
+            if (tb2 > tb1) return 2;
+            return 0;
+        }
+
+        // Ganador por games
+        if (s1 > s2) return 1;
+        if (s2 > s1) return 2;
+        return 0;
+    },
+
+    /**
+     * Determina ganador del match
+     * @param {array} sets - Array de sets
+     * @param {object} config - Configuración de scoring
+     * @returns {number} - 1 si gana jugador 1, 2 si gana jugador 2, 0 si incompleto
+     */
+    getMatchWinner(sets, config) {
+        const { setsToWin, isProSet } = config;
+        
+        let wins1 = 0, wins2 = 0;
         
         for (const set of sets) {
-            if (set.length >= 2) {
-                if (set[0] > set[1]) setsWon[0]++;
-                else if (set[1] > set[0]) setsWon[1]++;
-            }
+            const winner = this.getSetWinner(set, config);
+            if (winner === 1) wins1++;
+            if (winner === 2) wins2++;
         }
+
+        // Pro Set: 1 set único
+        if (isProSet && sets.length >= 1) {
+            const winner = this.getSetWinner(sets[0], config);
+            return winner;
+        }
+
+        // Champions: 2 sets + super TB
+        if (config.isChampions && sets.length >= 2) {
+            if (wins1 > wins2) return 1;
+            if (wins2 > wins1) return 2;
+            // Si empate 1-1, verificar super TB en set 3
+            if (sets.length >= 3) {
+                return this.getSetWinner(sets[2], config);
+            }
+            return 0;
+        }
+
+        // Normal: mejor de 3 sets
+        if (wins1 >= setsToWin) return 1;
+        if (wins2 >= setsToWin) return 2;
         
-        let winner = null;
-        if (setsWon[0] >= setsToWin) winner = 1;
-        else if (setsWon[1] >= setsToWin) winner = 2;
-        
-        return {
-            hasWinner: winner !== null,
-            winner,
-            setsWon
-        };
+        return 0;
     },
 
     /**
-     * Verifica si se permite empate según formato
+     * Permite empates según formato
      * @param {string} format - Formato del torneo
-     * @returns {boolean} - true si se permiten empates
+     * @returns {boolean} - true si permite empates
      */
-    allowsDraw(format) {
-        const drawAllowed = ['league', 'groups', 'swiss'];
-        return drawAllowed.includes(format);
+    allowsDraws(format) {
+        const drawFormats = ['league', 'groups', 'swiss'];
+        return drawFormats.includes(format);
     },
 
     /**
-     * Obtiene número de sets según configuración
-     * @param {string} setType - Tipo de set
-     * @returns {number} - Número de sets máximos
+     * Formatea score para display
+     * @param {array} sets - Sets del match
+     * @param {object} config - Configuración
+     * @returns {string} - Score formateado
      */
-    getSetsCount(setType) {
-        const config = this.getConfig(setType);
-        if (setType === 'pro') return 1;
-        if (setType === 'champions') return 3; // 2 sets + super tiebreak
-        return config.setsToWin * 2 - 1; // Mejor de N
+    formatScore(sets, config) {
+        if (!sets || sets.length === 0) return '—';
+        
+        return sets.map(set => {
+            const [s1, s2, tb1, tb2] = set;
+            if (s1 === config.gamesPerSet && s2 === config.gamesPerSet && tb1 && tb2) {
+                return `${s1}-${s2}(${tb1}-${tb2})`;
+            }
+            return `${s1}-${s2}`;
+        }).join(' ');
     }
 };
 
-// Exportar para uso global
-window.ScoringEngine = ScoringEngine;
+// Exportar
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = ScoringEngine;
+}
