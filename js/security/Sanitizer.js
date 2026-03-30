@@ -1,9 +1,6 @@
 /**
- * ============================================
- * SANITIZER MODULE - PREVENCIÓN DE XSS
- * ============================================
+ * Sanitizer.js - Protección XSS para Pádel Manager Pro
  * Sanitiza todos los datos de usuario antes de insertarlos en el DOM
- * Versión: 2.0
  */
 
 const Sanitizer = {
@@ -13,9 +10,7 @@ const Sanitizer = {
      * @returns {string} - Texto seguro para HTML
      */
     text(text) {
-        if (typeof text !== 'string') {
-            return String(text || '');
-        }
+        if (typeof text !== 'string') return String(text || '');
         return text
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
@@ -27,51 +22,24 @@ const Sanitizer = {
     /**
      * Sanitiza atributos HTML
      * @param {string} text - Texto para atributo
-     * @returns {string} - Texto seguro para atributos
+     * @returns {string} - Texto seguro para atributo
      */
-    attribute(text) {
+    attr(text) {
         return this.text(text).replace(/=/g, '&#61;');
     },
 
     /**
-     * Sanitiza URL (previene javascript:)
+     * Sanitiza URL (solo permite http, https, mailto)
      * @param {string} url - URL a validar
      * @returns {string} - URL segura o vacío
      */
     url(url) {
-        if (!url || typeof url !== 'string') return '';
+        if (!url) return '';
         const trimmed = url.trim();
-        if (trimmed.toLowerCase().startsWith('javascript:')) {
-            return '';
+        if (/^(https?:|mailto:)/i.test(trimmed)) {
+            return this.attr(trimmed);
         }
-        if (trimmed.toLowerCase().startsWith('data:')) {
-            // Permitir solo data:image
-            if (!trimmed.toLowerCase().startsWith('data:image/')) {
-                return '';
-            }
-        }
-        return this.text(trimmed);
-    },
-
-    /**
-     * Sanitiza objeto completo (recursivo)
-     * @param {object} obj - Objeto a sanitizar
-     * @returns {object} - Objeto sanitizado
-     */
-    object(obj) {
-        if (obj === null || obj === undefined) return obj;
-        if (typeof obj === 'string') return this.text(obj);
-        if (Array.isArray(obj)) return obj.map(item => this.object(item));
-        if (typeof obj === 'object') {
-            const sanitized = {};
-            for (const key in obj) {
-                if (obj.hasOwnProperty(key)) {
-                    sanitized[this.text(key)] = this.object(obj[key]);
-                }
-            }
-            return sanitized;
-        }
-        return obj;
+        return '';
     },
 
     /**
@@ -84,16 +52,28 @@ const Sanitizer = {
     },
 
     /**
-     * Inserta texto seguro en elemento
-     * @param {HTMLElement} element - Elemento destino
-     * @param {string} text - Texto a insertar
+     * Sanitiza objeto completo (recursivo)
+     * @param {any} data - Datos a sanitizar
+     * @returns {any} - Datos sanitizados
      */
-    setTextContent(element, text) {
-        if (element) {
-            element.textContent = this.text(text);
+    object(data) {
+        if (data === null || data === undefined) return data;
+        if (typeof data === 'string') return this.text(data);
+        if (Array.isArray(data)) return data.map(item => this.object(item));
+        if (typeof data === 'object') {
+            const sanitized = {};
+            for (const key in data) {
+                if (Object.prototype.hasOwnProperty.call(data, key)) {
+                    sanitized[key] = this.object(data[key]);
+                }
+            }
+            return sanitized;
         }
+        return data;
     }
 };
 
-// Exportar para uso global
-window.Sanitizer = Sanitizer;
+// Exportar para uso en otros módulos
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Sanitizer;
+}
