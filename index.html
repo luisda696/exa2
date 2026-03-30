@@ -15,7 +15,7 @@
 <!-- SPLASH SCREEN -->
 <div id="splash">
 <div class="splash-logo ico-float">
-<svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="22" cy="17" rx="11" ry="13"/><line x1="22" y1="30" x2="22" y2="42"/><line x1="15" y1="42" x2="29" y2="42"/><line x1="13" y1="11" x2="31" y2="11" stroke-width="1.5" stroke-opacity=".6"/><line x1="11" y1="17" x2="33" y2="17" stroke-width="1.5" stroke-opacity=".6"/><line x1="13" y1="23" x2="31" y2="23" stroke-width="1.5" stroke-opacity=".6"/><line x1="22" y1="4" x2="22" y2="30" stroke-width="1.5" stroke-opacity=".6"/></svg>
+<svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="22" cy="17" rx="11" ry="13"/><line x1="22" y1="30" x2="22" y2="42"/><line x1="15" y1="42" x2="29" y2="42"/><line x1="13" y1="11" x2="31" y1="11" stroke-width="1.5" stroke-opacity=".6"/><line x1="11" y1="17" x2="33" y2="17" stroke-width="1.5" stroke-opacity=".6"/><line x1="13" y1="23" x2="31" y2="23" stroke-width="1.5" stroke-opacity=".6"/><line x1="22" y1="4" x2="22" y2="30" stroke-width="1.5" stroke-opacity=".6"/></svg>
 </div>
 <div class="splash-title">Pádel Manager Pro</div>
 <div class="splash-sub">Sistema de torneos de pádel</div>
@@ -52,12 +52,13 @@
 <div><label class="pe-label">Posición</label><select id="pe-position" class="pe-select"><option value="">No especificada</option><option value="drive">Drive (Der.)</option><option value="reves">Revés (Izq.)</option></select></div>
 </div>
 <div class="pe-grid">
+<div><label class="pe-label">ELO</label><input type="number" id="pe-ranking" class="pe-input" min="0" max="9999" placeholder="0"></div>
 <div><label class="pe-label">Edad</label><input type="number" id="pe-age" class="pe-input" min="5" max="99" placeholder="—"></div>
-<div style="display:flex;align-items:center;gap:8px;padding-top:10px">
+</div>
+<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px;background:rgba(255,255,255,.06);border-radius:12px;">
 <input type="checkbox" id="pe-seed" class="w-4 h-4 accent-yellow-500">
 <span style="font-size:13px;color:rgba(255,255,255,.75);font-weight:600">⭐ Cabeza de serie</span>
-</div>
-</div>
+</label>
 <div class="pe-progress"><div class="pe-progress-fill" id="pe-progress"></div></div>
 <div class="pe-btn-row">
 <button type="button" class="pe-btn pe-btn-cancel" onclick="app.closePlayerEdit()">
@@ -143,8 +144,8 @@
 <div>
 <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Tipo de Equipo</label>
 <div class="grid grid-cols-2 gap-2">
-<label class="cursor-pointer"><input type="radio" name="teamType" value="doubles" checked class="peer sr-only" onchange="app.setTeamType(2)"><div class="p-3 border-2 border-gray-200 rounded-xl peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all text-center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" style="display:block;margin:0 auto 6px"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><p class="font-bold text-xs text-gray-700">Dobles (2)</p></div></label>
-<label class="cursor-pointer"><input type="radio" name="teamType" value="custom" class="peer sr-only" onchange="app.setTeamType('custom')"><div class="p-3 border-2 border-gray-200 rounded-xl peer-checked:border-purple-500 peer-checked:bg-purple-50 transition-all text-center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" style="display:block;margin:0 auto 6px"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><p class="font-bold text-xs text-gray-700">Equipos</p></div></label>
+<label class="cursor-pointer"><input type="radio" name="teamType" value="doubles" checked class="peer sr-only" onchange="app.setTeamType(2)"><div class="p-3 border-2 border-gray-200 rounded-xl peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all text-center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" style="display:block;margin:0 auto 6px"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><p class="font-bold text-xs text-gray-700">Parejas (2)</p></div></label>
+<label class="cursor-pointer"><input type="radio" name="teamType" value="custom" class="peer sr-only" onchange="app.setTeamType('custom')"><div class="p-3 border-2 border-gray-200 rounded-xl peer-checked:border-purple-500 peer-checked:bg-purple-50 transition-all text-center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" style="display:block;margin:0 auto 6px"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><p class="font-bold text-xs text-gray-700">Personalizado</p></div></label>
 </div>
 <div id="custom-players-container" style="display:none" class="inline-expand inline-expand-purple">
 <label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Jugadores por Equipo</label>
@@ -233,13 +234,13 @@
 </div>
 <div class="flex gap-2 mb-4 flex-wrap">
 <button onclick="app.openAdd()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-black py-2.5 px-4 rounded-xl text-sm transition-all flex items-center justify-center gap-2 min-w-[130px] btn-shine shadow-md">
-<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span id="add-label">+ Nuevo Equipo</span>
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span id="add-label">+ Nuevo Equipo</span>
 </button>
 <button onclick="app.openAutoFill()" class="bg-gradient-to-r from-purple-100 to-blue-100 hover:from-purple-200 hover:to-blue-200 text-purple-700 font-black py-2.5 px-3 rounded-xl text-sm transition-all flex items-center gap-1.5 border border-purple-200">
-<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5z"/><path d="M19 14l.75 2.25L22 17l-2.25.75L19 20l-.75-2.25L16 17l2.25-.75z"/></svg>Auto-llenar
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5z"/><path d="M19 14l.75 2.25L22 17l-2.25.75L19 20l-.75-2.25L16 17l2.25-.75z"/></svg>Auto-llenar
 </button>
 <button onclick="app.clearAll()" class="bg-red-50 hover:bg-red-100 text-red-600 font-black py-2.5 px-3 rounded-xl text-sm transition-all flex items-center gap-1.5 border border-red-200 ico-hshake">
-<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>Borrar
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>Borrar
 </button>
 </div>
 <div id="reg-list"><div class="text-center py-10 text-gray-400"><svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="#d1d5db" stroke-width="2" stroke-linecap="round" style="margin:0 auto 12px"><ellipse cx="22" cy="17" rx="11" ry="13"/><line x1="22" y1="30" x2="22" y2="42"/><line x1="15" y1="42" x2="29" y2="42"/></svg><p class="font-bold">Sin equipos registrados</p><p class="text-sm mt-1">Pulsa Agregar o Auto-llenar</p></div></div>
@@ -257,22 +258,6 @@
 </div>
 <div class="mb-4"><label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Fecha de Inicio</label>
 <input type="date" id="f-startdate" class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-700 text-sm focus:border-blue-500 outline-none bg-white" onchange="app.calculateDuration()"></div>
-
-<!-- ✅ NUEVA OPCIÓN: DÍAS DE JUEGO -->
-<div class="mb-4">
-<label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Días de Juego (opcional)</label>
-<div class="flex flex-wrap gap-2" id="game-days-container">
-<label class="cursor-pointer"><input type="checkbox" class="game-day peer sr-only" value="0" onchange="app.calculateDuration()"><div class="px-3 py-2 border-2 border-gray-200 rounded-lg peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all text-center"><span class="text-xs font-bold text-gray-700">Dom</span></div></label>
-<label class="cursor-pointer"><input type="checkbox" class="game-day peer sr-only" value="1" checked onchange="app.calculateDuration()"><div class="px-3 py-2 border-2 border-gray-200 rounded-lg peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all text-center"><span class="text-xs font-bold text-gray-700">Lun</span></div></label>
-<label class="cursor-pointer"><input type="checkbox" class="game-day peer sr-only" value="2" checked onchange="app.calculateDuration()"><div class="px-3 py-2 border-2 border-gray-200 rounded-lg peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all text-center"><span class="text-xs font-bold text-gray-700">Mar</span></div></label>
-<label class="cursor-pointer"><input type="checkbox" class="game-day peer sr-only" value="3" checked onchange="app.calculateDuration()"><div class="px-3 py-2 border-2 border-gray-200 rounded-lg peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all text-center"><span class="text-xs font-bold text-gray-700">Mié</span></div></label>
-<label class="cursor-pointer"><input type="checkbox" class="game-day peer sr-only" value="4" checked onchange="app.calculateDuration()"><div class="px-3 py-2 border-2 border-gray-200 rounded-lg peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all text-center"><span class="text-xs font-bold text-gray-700">Jue</span></div></label>
-<label class="cursor-pointer"><input type="checkbox" class="game-day peer sr-only" value="5" checked onchange="app.calculateDuration()"><div class="px-3 py-2 border-2 border-gray-200 rounded-lg peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all text-center"><span class="text-xs font-bold text-gray-700">Vie</span></div></label>
-<label class="cursor-pointer"><input type="checkbox" class="game-day peer sr-only" value="6" checked onchange="app.calculateDuration()"><div class="px-3 py-2 border-2 border-gray-200 rounded-lg peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all text-center"><span class="text-xs font-bold text-gray-700">Sáb</span></div></label>
-</div>
-<p class="text-xs text-gray-400 mt-2">💡 Deja todos marcados para jugar todos los días, o selecciona solo los días que se jugará (ej: solo lunes)</p>
-</div>
-
 <div class="bg-blue-50 rounded-xl p-3 border border-blue-100">
 <div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-gray-600">Equipos registrados:</span><span class="text-sm font-black text-blue-700" id="reg-cal-teams">0</span></div>
 <div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-gray-600">Partidos estimados:</span><span class="text-sm font-black text-gray-700" id="calc-matches">—</span></div>
@@ -369,7 +354,7 @@
 </div>
 </nav>
 
-<!-- MODALES (mismos que antes) -->
+<!-- MODALS -->
 <div id="gen-loader">
 <div class="gl-content">
 <div class="gl-title">Generando Torneo</div>
@@ -393,22 +378,6 @@
 <div class="flex gap-2 mt-4">
 <button onclick="app.closeAdd()" class="flex-1 border-2 border-gray-200 text-gray-600 font-bold py-2.5 rounded-xl hover:bg-gray-50 transition-all flex items-center justify-center gap-1.5"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Cancelar</button>
 <button onclick="app.submitAdd()" class="flex-1 bg-blue-600 text-white font-black py-2.5 rounded-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-1.5" id="add-ok"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Agregar</button>
-</div>
-</div>
-</div>
-
-<div id="m-autofill" style="display:none" class="fixed inset-0 bg-black/55 z-[8000] flex items-center justify-center p-4 backdrop-blur-sm" onclick="if(event.target===this)app.closeAutoFill()">
-<div class="bg-white rounded-2xl p-5 w-full max-w-xs shadow-2xl manim">
-<h3 class="text-lg font-black text-gray-900 mb-1 flex items-center gap-2.5"><span class="ico-badge ico-purple"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5z"/></svg></span>Auto-llenar</h3>
-<p class="text-sm text-gray-400 mb-4" id="af-hint">Agrega equipos ficticios</p>
-<div class="mb-4">
-<label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">¿Cuántos equipos en total?</label>
-<input type="number" id="af-count" min="4" max="200" value="8" class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 font-black text-gray-700 text-center focus:border-blue-500 outline-none text-2xl">
-<p class="text-xs text-gray-400 mt-1 text-center">Mínimo 4 · Máximo 200</p>
-</div>
-<div class="flex gap-2">
-<button onclick="app.closeAutoFill()" class="flex-1 border-2 border-gray-200 text-gray-600 font-bold py-2.5 rounded-xl hover:bg-gray-50 transition-all flex items-center justify-center gap-1.5"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Cancelar</button>
-<button onclick="app.runAutoFill()" class="flex-1 bg-blue-600 text-white font-black py-2.5 rounded-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-1.5"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5z"/></svg>Llenar</button>
 </div>
 </div>
 </div>
@@ -529,11 +498,11 @@
 
 <!-- JAVASCRIPT MODULES -->
 <script src="js/security/Sanitizer.js"></script>
-<script src="js/storage/VersionedStorage.js"></script>
 <script src="js/scoring/ScoringEngine.js"></script>
 <script src="js/formats/AmericanoFormat.js"></script>
 <script src="js/formats/MexicanoFormat.js"></script>
 <script src="js/formats/SwissFormat.js"></script>
+<script src="js/storage/VersionedStorage.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>
