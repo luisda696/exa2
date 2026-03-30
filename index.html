@@ -1,47 +1,524 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Padel Manager Pro</title>
-  <link rel="stylesheet" href="css/styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="theme-color" content="#1e3a8a">
+<title>Pádel Manager Pro</title>
+<link href="https://cdn.jsdelivr.net/npm/fontsource-inter@5.0.16/index.css" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="css/styles.css">
 </head>
-<body>
-  <!-- Mantener tu estructura HTML actual, pero reemplazar:
-       1. innerHTML por Sanitizer.html()
-       2. Lógica de puntuación por ScoringEngine
-       3. Eliminar "Custom" del selector de formatos -->
-  <div id="app">
-    <!-- Ejemplo de selector de formatos (sin "Custom") -->
-    <select id="f-format">
-      <option value="elimination">Eliminación</option>
-      <option value="league">Liga</option>
-      <option value="groups">Grupos</option>
-      <option value="americano">Americano</option>
-      <option value="mexicano">Mexicano</option>
-      <option value="swiss">Suizo</option>
-    </select>
+<body class="min-h-screen">
+<div id="mesh-bg" aria-hidden="true"><div class="orb orb-1"></div><div class="orb orb-2"></div><div class="orb orb-3"></div></div>
 
-    <!-- Ejemplo de selector de sets (con "Custom") -->
-    <select id="f-settype">
-      <option value="normal">Normal (6 games)</option>
-      <option value="short">Short (4 games)</option>
-      <option value="pro">Pro (8 games)</option>
-      <option value="champions">Champions (2 sets + Super TB)</option>
-      <option value="custom">Custom</option>
-    </select>
-  </div>
+<!-- SPLASH SCREEN -->
+<div id="splash">
+<div class="splash-logo ico-float">
+<svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="22" cy="17" rx="11" ry="13"/><line x1="22" y1="30" x2="22" y2="42"/><line x1="15" y1="42" x2="29" y2="42"/><line x1="13" y1="11" x2="31" y2="11" stroke-width="1.5" stroke-opacity=".6"/><line x1="11" y1="17" x2="33" y2="17" stroke-width="1.5" stroke-opacity=".6"/><line x1="13" y1="23" x2="31" y2="23" stroke-width="1.5" stroke-opacity=".6"/><line x1="22" y1="4" x2="22" y2="30" stroke-width="1.5" stroke-opacity=".6"/></svg>
+</div>
+<div class="splash-title">Pádel Manager Pro</div>
+<div class="splash-sub">Sistema de torneos de pádel</div>
+<div class="splash-bar-track"><div class="splash-bar-fill" id="splash-bar"></div></div>
+<div class="splash-msg" id="splash-msg">Cargando...</div>
+</div>
 
-  <!-- Importar módulos -->
-  <script type="module">
-    import Sanitizer from './js/core/Sanitizer.js';
-    import ScoringEngine from './js/core/ScoringEngine.js';
-    import VersionedStorage from './js/core/VersionedStorage.js';
-    import AmericanoFormat from './js/formats/Americano.js';
-    // ... (importar todos los módulos necesarios)
+<!-- PLAYER EDIT ZONE -->
+<div id="player-edit-zone">
+<div class="pe-card">
+<div style="text-align:center;margin-bottom:20px">
+<h2 class="pe-title">Editar Jugador</h2>
+<p class="pe-subtitle" id="pe-player-name">—</p>
+</div>
+<div class="pe-media-zone" id="pe-media-zone" onclick="document.getElementById('pe-media-file').click()">
+<div class="pe-media-placeholder" id="pe-placeholder">
+<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+<span style="font-size:12px;font-weight:600">Toca para agregar foto o video</span>
+<span style="font-size:10px;opacity:.6">JPG · PNG · GIF · MP4 (max 10s)</span>
+</div>
+<img id="pe-media-preview" style="display:none" alt="">
+<video id="pe-video-preview" style="display:none" autoplay muted loop playsinline></video>
+<span class="pe-media-badge" id="pe-media-badge">VIDEO</span>
+<span class="pe-video-indicator" id="pe-video-ind"><svg width="10" height="10" viewBox="0 0 24 24" fill="white"><polygon points="5 3 19 12 5 21 5 3"/></svg><span id="pe-video-duration">0:00</span></span>
+</div>
+<input type="file" id="pe-media-file" accept="image/*,image/gif,video/mp4,video/webm,video/*" style="display:none" onchange="app.previewPlayerMedia(this)">
+<form class="pe-form" onsubmit="app.savePlayerEdit(event)">
+<div class="pe-grid">
+<div><label class="pe-label">Nombre</label><input type="text" id="pe-name" class="pe-input" required></div>
+<div><label class="pe-label">Categoría</label><select id="pe-category" class="pe-select"><option value="3">3CAT</option><option value="4">4CAT</option><option value="5">5CAT</option><option value="6">6CAT</option><option value="7" selected>7CAT</option></select></div>
+</div>
+<div class="pe-grid">
+<div><label class="pe-label">Mano</label><select id="pe-hand" class="pe-select"><option value="">No especificado</option><option value="right">✋ Diestro</option><option value="left">🤚 Zurdo</option></select></div>
+<div><label class="pe-label">Posición</label><select id="pe-position" class="pe-select"><option value="">No especificada</option><option value="drive">Drive (Der.)</option><option value="reves">Revés (Izq.)</option></select></div>
+</div>
+<div class="pe-grid">
+<div><label class="pe-label">ELO</label><input type="number" id="pe-ranking" class="pe-input" min="0" max="9999" placeholder="0"></div>
+<div><label class="pe-label">Edad</label><input type="number" id="pe-age" class="pe-input" min="5" max="99" placeholder="—"></div>
+</div>
+<label style="display:flex;align-items:center;gap:8px;cursor:pointer;padding:10px;background:rgba(255,255,255,.06);border-radius:12px;">
+<input type="checkbox" id="pe-seed" class="w-4 h-4 accent-yellow-500">
+<span style="font-size:13px;color:rgba(255,255,255,.75);font-weight:600">⭐ Cabeza de serie</span>
+</label>
+<div class="pe-progress"><div class="pe-progress-fill" id="pe-progress"></div></div>
+<div class="pe-btn-row">
+<button type="button" class="pe-btn pe-btn-cancel" onclick="app.closePlayerEdit()">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Cancelar
+</button>
+<button type="submit" class="pe-btn pe-btn-save">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Guardar
+</button>
+</div>
+</form>
+</div>
+</div>
 
-    // Ejemplo de uso:
-    document.getElementById('team-name').innerHTML = Sanitizer.html(`<div>${teamName}</div>`);
-  </script>
+<!-- HEADER -->
+<header id="main-header" class="bg-gradient-to-r from-blue-950 via-blue-800 to-blue-600 text-white sticky top-0 z-50 shadow-2xl no-print">
+<div id="hdr-strip">
+<div class="w-7 h-7 bg-white/15 rounded-lg flex items-center justify-center flex-shrink-0">
+<svg width="14" height="14" viewBox="0 0 44 44" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round"><ellipse cx="22" cy="17" rx="11" ry="13"/><line x1="22" y1="30" x2="22" y2="42"/><line x1="15" y1="42" x2="29" y2="42"/></svg>
+</div>
+<span id="hdr-strip-name">Torneo Pádel</span>
+<span id="hdr-strip-sub">—</span>
+</div>
+<button id="hdr-toggle" onclick="app.toggleHeader()" title="Mostrar/ocultar header">
+<svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="2" stroke-linecap="round"><polyline points="1 1 5 5 9 1"/></svg>
+</button>
+<div id="hdr-body">
+<div class="max-w-5xl mx-auto px-4 pt-3 pb-2 flex items-center gap-3">
+<div class="w-10 h-10 bg-white/15 rounded-2xl flex items-center justify-center flex-shrink-0 ico ico-float">
+<svg width="22" height="22" viewBox="0 0 44 44" fill="none" stroke="white" stroke-width="2.4" stroke-linecap="round"><ellipse cx="22" cy="17" rx="11" ry="13"/><line x1="22" y1="30" x2="22" y2="42"/><line x1="15" y1="42" x2="29" y2="42"/><line x1="22" y1="4" x2="22" y2="30" stroke-width="1.5" stroke-opacity=".6"/></svg>
+</div>
+<div class="flex-1 min-w-0">
+<div class="flex items-center gap-2">
+<span id="tour-name" class="font-black text-lg truncate cursor-pointer hover:opacity-80 tracking-tight" onclick="app.editName()">Torneo Pádel</span>
+<span onclick="app.editName()" class="ico ico-hwiggle cursor-pointer opacity-60 hover:opacity-100">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+</span>
+</div>
+<p class="text-xs text-blue-200 truncate" id="hdr-sub">Configura y genera tu torneo</p>
+</div>
+<div class="flex items-center gap-1.5">
+<button onclick="app.openHistory()" class="btn-hdr ico-hbounce flex items-center gap-1.5 bg-white/15 hover:bg-white/28 text-white text-xs font-bold px-2.5 py-1.5 rounded-xl">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/><polyline points="12 7 12 12 16 14"/></svg>
+<span class="hidden sm:inline">Historial</span>
+</button>
+<button onclick="app.resetAll()" class="btn-hdr ico-hshake flex items-center gap-1.5 bg-white/15 hover:bg-white/28 text-white text-xs font-bold px-2.5 py-1.5 rounded-xl">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+<span class="hidden sm:inline">Reiniciar</span>
+</button>
+</div>
+</div>
+<div class="max-w-5xl mx-auto px-4 pb-3" style="position:relative">
+<div class="flex gap-1 mb-1">
+<div id="step-0" class="step-pill bg-white/85"></div><div id="step-1" class="step-pill bg-white/22"></div><div id="step-2" class="step-pill bg-white/22"></div>
+</div>
+<div class="flex text-xs text-white/50 font-semibold">
+<span class="flex-1">⚙ Configurar</span>
+<span class="flex-1 text-center">👥 Registrar</span>
+<span class="flex-1 text-right">🏆 Torneo</span>
+</div>
+</div>
+</div>
+</header>
+
+<!-- MAIN CONTENT -->
+<main class="max-w-5xl mx-auto px-4 py-5 pb-28">
+
+<!-- CONFIG VIEW -->
+<div id="v-config">
+<div class="bg-white rounded-2xl shadow-sm p-5 mb-4">
+<h2 class="text-xl font-black text-gray-900 mb-1 flex items-center gap-2.5 tracking-tight">
+<span class="ico-badge ico-blue"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/></svg></span>Configurar Torneo
+</h2>
+<p class="text-sm text-gray-400 mb-5">Define el formato y reglas antes de registrar equipos</p>
+<form onsubmit="app.goRegister(event)" class="space-y-4">
+<div>
+<label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Modalidad</label>
+<div class="grid grid-cols-3 gap-2">
+<label class="cursor-pointer"><input type="radio" name="genderMode" value="male" checked class="peer sr-only"><div class="p-3 border-2 border-gray-200 rounded-xl peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all text-center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" style="display:block;margin-bottom:6px"><circle cx="10" cy="14" r="6"/><line x1="19" y1="5" x2="14.14" y2="9.86"/><polyline points="15 5 19 5 19 9"/></svg><p class="font-bold text-xs text-gray-700">Masculino</p></div></label>
+<label class="cursor-pointer"><input type="radio" name="genderMode" value="female" class="peer sr-only"><div class="p-3 border-2 border-gray-200 rounded-xl peer-checked:border-pink-500 peer-checked:bg-pink-50 transition-all text-center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#ec4899" stroke-width="2" stroke-linecap="round" style="display:block;margin-bottom:6px"><circle cx="12" cy="8" r="6"/><line x1="12" y1="13" x2="12" y2="21"/><line x1="9" y1="18" x2="15" y2="18"/></svg><p class="font-bold text-xs text-gray-700">Femenino</p></div></label>
+<label class="cursor-pointer"><input type="radio" name="genderMode" value="mixed" class="peer sr-only"><div class="p-3 border-2 border-gray-200 rounded-xl peer-checked:border-purple-500 peer-checked:bg-purple-50 transition-all text-center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="1.9" stroke-linecap="round" style="display:block;margin-bottom:6px"><circle cx="8" cy="14" r="4"/><line x1="8" y1="10" x2="8" y2="3"/><line x1="5" y1="6" x2="11" y2="6"/><circle cx="17" cy="8" r="4"/><line x1="17" y1="12" x2="17" y2="20"/><line x1="14" y1="17" x2="20" y2="17"/></svg><p class="font-bold text-xs text-gray-700">Mixto</p></div></label>
+</div>
+</div>
+<div>
+<label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Tipo de Equipo</label>
+<div class="grid grid-cols-2 gap-2">
+<label class="cursor-pointer"><input type="radio" name="teamType" value="doubles" checked class="peer sr-only" onchange="app.setTeamType(2)"><div class="p-3 border-2 border-gray-200 rounded-xl peer-checked:border-blue-500 peer-checked:bg-blue-50 transition-all text-center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linecap="round" style="display:block;margin:0 auto 6px"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg><p class="font-bold text-xs text-gray-700">Parejas (2)</p></div></label>
+<label class="cursor-pointer"><input type="radio" name="teamType" value="custom" class="peer sr-only" onchange="app.setTeamType('custom')"><div class="p-3 border-2 border-gray-200 rounded-xl peer-checked:border-purple-500 peer-checked:bg-purple-50 transition-all text-center"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#8b5cf6" stroke-width="2" stroke-linecap="round" style="display:block;margin:0 auto 6px"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg><p class="font-bold text-xs text-gray-700">Personalizado</p></div></label>
+</div>
+<div id="custom-players-container" style="display:none" class="inline-expand inline-expand-purple">
+<label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Jugadores por Equipo</label>
+<div class="flex items-center gap-3"><input type="number" id="f-playersPerTeam" min="1" max="20" value="2" class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 font-black text-gray-700 text-center text-lg focus:border-purple-500 outline-none"><span class="text-sm text-gray-500 font-medium">jugadores</span></div>
+<p class="text-xs text-gray-400 mt-1">Mínimo 1 (Single) · Máximo 20</p>
+</div>
+</div>
+<div>
+<label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Formato</label>
+<select id="f-format" class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 font-bold text-gray-700 text-sm focus:border-blue-500 outline-none bg-white" onchange="app.updateConfigSummary()">
+<option value="elimination">🏆 Eliminación Directa</option>
+<option value="league">📋 Liga — Todos contra Todos</option>
+<option value="groups">🏟️ Fase de Grupos + Eliminatoria</option>
+<option value="americano">🌎 Americano (Rotación)</option>
+<option value="mexicano">🇲🇽 Mexicano (Por puntos)</option>
+<option value="swiss">♟️ Suizo (No eliminación)</option>
+</select>
+</div>
+<div>
+<label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Puntos (Victoria / Derrota / Empate)</label>
+<div class="grid grid-cols-3 gap-2">
+<div class="text-center"><p class="text-xs text-green-600 font-bold mb-1">✓ Victoria</p><input type="number" id="f-win" value="3" min="0" class="w-full border-2 border-gray-200 rounded-xl px-2 py-2 font-black text-center text-gray-700 focus:border-green-500 outline-none"></div>
+<div class="text-center"><p class="text-xs text-red-500 font-bold mb-1">✗ Derrota</p><input type="number" id="f-loss" value="1" min="0" class="w-full border-2 border-gray-200 rounded-xl px-2 py-2 font-black text-center text-gray-700 focus:border-red-400 outline-none"></div>
+<div class="text-center"><p class="text-xs text-gray-500 font-bold mb-1">— Empate</p><input type="number" id="f-draw" value="2" min="0" class="w-full border-2 border-gray-200 rounded-xl px-2 py-2 font-black text-center text-gray-700 focus:border-gray-400 outline-none"></div>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-3">
+<div><label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Tipo de Set</label>
+<select id="f-settype" class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 font-bold text-gray-700 text-sm focus:border-blue-500 outline-none bg-white" onchange="app.toggleSetOptions()">
+<option value="normal">Normal (6 games)</option><option value="short">Short Set (4 games)</option><option value="pro">Pro Set (8 games)</option><option value="champions">Champions (10/cada 6)</option><option value="custom">Personalizado</option>
+</select></div>
+<div><label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Tie-Break</label>
+<select id="f-tiebreak-type" class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 font-bold text-gray-700 text-sm focus:border-blue-500 outline-none bg-white" onchange="app.toggleCustomTiebreak()">
+<option value="standard">Estándar (a 7)</option><option value="match">Match TB (a 10)</option><option value="champions">Champions (10/cada 6)</option><option value="custom">Personalizado</option>
+</select></div>
+</div>
+<div id="custom-set-container" style="display:none" class="inline-expand inline-expand-blue">
+<label class="block text-xs font-bold text-blue-700 uppercase tracking-widest mb-2">Games por Set Personalizado</label>
+<input type="number" id="f-custom-games" min="1" max="15" value="6" class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 font-black text-gray-700 text-center focus:border-blue-500 outline-none">
+<p class="text-xs text-gray-500 mt-1">Mínimo 1 · Máximo 15 games</p>
+</div>
+<div id="custom-tiebreak-container" style="display:none" class="inline-expand inline-expand-purple">
+<label class="block text-xs font-bold text-purple-700 uppercase tracking-widest mb-2">Puntos Tie-Break Personalizado</label>
+<input type="number" id="f-tiebreak-points" min="5" max="25" value="7" class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 font-black text-gray-700 text-center focus:border-purple-500 outline-none">
+<p class="text-xs text-gray-500 mt-1">Ganar por 2 puntos siempre aplica</p>
+</div>
+<div><label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Sorteo</label>
+<select id="f-matchtype" class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 font-bold text-gray-700 text-sm focus:border-blue-500 outline-none bg-white">
+<option value="random">🎲 Aleatorio</option><option value="seeded">⭐ Por nivel</option><option value="snake">🐍 Snake Draft</option>
+</select></div>
+<div>
+<label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Imagen del Torneo (opcional)</label>
+<div class="tour-img-zone" onclick="document.getElementById('cfg-tour-img').click()">
+<svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.7" stroke-linecap="round" style="display:block;margin:0 auto 6px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+<p class="text-xs text-blue-500 font-bold" id="cfg-img-lbl">Toca para agregar logo/imagen</p>
+<p class="text-xs text-gray-400 mt-0.5">Se mostrará en el loader del torneo</p>
+<img id="tour-img-preview" alt="Preview">
+</div>
+<input type="file" id="cfg-tour-img" accept="image/*,image/gif" style="display:none" onchange="app.loadCfgImage(this)">
+<button type="button" id="cfg-img-remove" onclick="app.removeCfgImage()" style="display:none" class="mt-2 text-xs text-red-500 font-bold flex items-center gap-1 hover:text-red-700">
+<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Quitar imagen
+</button>
+</div>
+<button type="submit" class="w-full bg-gradient-to-r from-blue-900 to-blue-500 text-white font-black py-4 rounded-2xl text-base shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all btn-shine btn-pulse flex items-center justify-center gap-2.5">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg>Siguiente: Registrar Equipos →
+</button>
+</form>
+</div>
+</div>
+
+<!-- REGISTER VIEW -->
+<div id="v-register" style="display:none">
+<div class="bg-white rounded-2xl shadow-sm p-5 mb-4">
+<div class="flex items-center gap-3 mb-4">
+<button onclick="app.sv('config')" class="w-10 h-10 flex items-center justify-center rounded-xl bg-gray-100 hover:bg-gray-200 transition-all flex-shrink-0 ico-hscale">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+</button>
+<div class="flex-1 min-w-0">
+<h2 class="text-xl font-black text-gray-900 tracking-tight flex items-center gap-2.5" id="reg-title">
+<span class="ico-badge ico-blue"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></span>Registrar Equipos
+</h2>
+<p class="text-sm text-gray-400" id="reg-hint">Mínimo 4 equipos para generar</p>
+<p class="text-xs text-blue-500 font-bold mt-0.5" id="reg-mode"></p>
+</div>
+<span class="bg-blue-100 text-blue-700 font-black text-sm px-3 py-1 rounded-full ico-notify" id="reg-count">0</span>
+</div>
+<div class="flex gap-2 mb-4 flex-wrap">
+<button onclick="app.openAdd()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-black py-2.5 px-4 rounded-xl text-sm transition-all flex items-center justify-center gap-2 min-w-[130px] btn-shine shadow-md">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg><span id="add-label">+ Nuevo Equipo</span>
+</button>
+<button onclick="app.openAutoFill()" class="bg-gradient-to-r from-purple-100 to-blue-100 hover:from-purple-200 hover:to-blue-200 text-purple-700 font-black py-2.5 px-3 rounded-xl text-sm transition-all flex items-center gap-1.5 border border-purple-200">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5z"/><path d="M19 14l.75 2.25L22 17l-2.25.75L19 20l-.75-2.25L16 17l2.25-.75z"/></svg>Auto-llenar
+</button>
+<button onclick="app.clearAll()" class="bg-red-50 hover:bg-red-100 text-red-600 font-black py-2.5 px-3 rounded-xl text-sm transition-all flex items-center gap-1.5 border border-red-200 ico-hshake">
+<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>Borrar
+</button>
+</div>
+<div id="reg-list"><div class="text-center py-10 text-gray-400"><svg width="44" height="44" viewBox="0 0 44 44" fill="none" stroke="#d1d5db" stroke-width="2" stroke-linecap="round" style="margin:0 auto 12px"><ellipse cx="22" cy="17" rx="11" ry="13"/><line x1="22" y1="30" x2="22" y2="42"/><line x1="15" y1="42" x2="29" y2="42"/></svg><p class="font-bold">Sin equipos registrados</p><p class="text-sm mt-1">Pulsa Agregar o Auto-llenar</p></div></div>
+</div>
+<div class="bg-white rounded-2xl shadow-sm p-5 mb-4">
+<h3 class="font-black text-gray-900 text-base mb-1 flex items-center gap-2">
+<span class="ico-badge ico-blue" style="padding:5px"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span>Calendario &amp; Canchas
+</h3>
+<p class="text-xs text-gray-400 mb-4">La duración se calcula con equipos reales, formato y canchas definidas.</p>
+<div class="grid grid-cols-2 gap-3 mb-4">
+<div><label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Canchas</label>
+<input type="number" id="f-courts" min="1" max="50" value="2" class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 font-black text-gray-700 text-center text-lg focus:border-blue-500 outline-none" onchange="app.calculateDuration()"></div>
+<div><label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Partidos / Día</label>
+<input type="number" id="f-matchesperday" min="1" max="100" value="4" class="w-full border-2 border-gray-200 rounded-xl px-3 py-3 font-black text-gray-700 text-center text-sm focus:border-blue-500 outline-none" onchange="app.calculateDuration()"></div>
+</div>
+<div class="mb-4"><label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">Fecha de Inicio</label>
+<input type="date" id="f-startdate" class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 font-bold text-gray-700 text-sm focus:border-blue-500 outline-none bg-white" onchange="app.calculateDuration()"></div>
+<div class="bg-blue-50 rounded-xl p-3 border border-blue-100">
+<div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-gray-600">Equipos registrados:</span><span class="text-sm font-black text-blue-700" id="reg-cal-teams">0</span></div>
+<div class="flex justify-between items-center mb-1"><span class="text-xs font-bold text-gray-600">Partidos estimados:</span><span class="text-sm font-black text-gray-700" id="calc-matches">—</span></div>
+<div class="flex justify-between items-center mb-2"><span class="text-xs font-bold text-gray-600">Duración estimada:</span><span class="text-xl font-black text-blue-700" id="calc-days">—</span></div>
+<div class="text-xs text-gray-500" id="calc-dates">Ingresa fecha de inicio para ver rango</div>
+<div id="calendar-preview" class="mt-3 pt-3 border-t border-gray-100 hidden">
+<p class="text-xs font-bold text-gray-500 mb-2">Vista previa:</p>
+<div class="calendar-grid" id="cal-grid"></div>
+</div>
+</div>
+</div>
+<div class="bg-white rounded-2xl shadow-sm p-4">
+<div class="flex items-center justify-between mb-3">
+<div>
+<p class="font-bold text-gray-800 text-sm" id="gen-status">Necesitas mínimo 4 equipos</p>
+<p class="text-xs text-gray-400 mt-0.5" id="gen-sub">—</p>
+</div>
+<span id="gen-badge" class="bg-red-100 text-red-600 font-black text-xs px-3 py-1 rounded-full">Faltan 4</span>
+</div>
+<button id="gen-btn" onclick="app.generate()" disabled class="w-full bg-gray-300 text-white font-black py-4 rounded-xl text-sm transition-all opacity-60 cursor-not-allowed flex items-center justify-center gap-2">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5z"/><path d="M19 14l.75 2.25L22 17l-2.25.75L19 20l-.75-2.25L16 17l2.25-.75z"/></svg>Generar Torneo
+</button>
+</div>
+</div>
+
+<!-- DASHBOARD VIEW -->
+<div id="v-dash" style="display:none">
+<div id="dash-logo-strip" style="display:none" class="flex justify-center mb-3 no-print"><img id="dash-tour-logo" src="" alt=""></div>
+<div class="flex items-center gap-3 mb-3">
+<button onclick="app.sv('register')" class="w-10 h-10 flex items-center justify-center rounded-xl bg-white shadow-sm hover:shadow-md transition-all flex-shrink-0 no-print ico-hscale">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+</button>
+<div class="flex-1 min-w-0">
+<p class="text-xs text-gray-500 truncate font-medium" id="dash-info">—</p>
+<div class="h-2 bg-gray-200 rounded-full mt-1.5 overflow-hidden"><div class="h-full bg-gradient-to-r from-green-600 to-green-400 rounded-full transition-all duration-700" id="dash-prog" style="width:0%"></div></div>
+<div class="flex justify-between mt-0.5"><span class="text-xs text-gray-400" id="dash-prog-lbl">0/0</span><span class="text-xs font-black text-gray-500" id="dash-prog-pct">0%</span></div>
+</div>
+<div class="flex gap-1.5 no-print">
+<button onclick="app.openShare()" class="flex items-center gap-1.5 bg-white rounded-xl shadow-sm px-2.5 py-1.5 text-xs font-bold text-gray-600 hover:shadow-md transition-all ico-hrotate">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>Compartir
+</button>
+<button onclick="window.print()" class="flex items-center gap-1 bg-white rounded-xl shadow-sm px-2.5 py-1.5 text-xs font-bold text-gray-600 hover:shadow-md transition-all ico-hbounce">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>Imprimir
+</button>
+</div>
+</div>
+<div class="grid grid-cols-4 gap-2 mb-4">
+<div class="bg-white rounded-2xl p-3 text-center shadow-sm"><p class="text-2xl font-black text-gray-900 leading-none" id="d-teams">—</p><p class="text-xs text-gray-400 mt-1 font-semibold">Equipos</p></div>
+<div class="bg-white rounded-2xl p-3 text-center shadow-sm"><p class="text-2xl font-black text-green-600 leading-none" id="d-done">0</p><p class="text-xs text-gray-400 mt-1 font-semibold">Jugados</p></div>
+<div class="bg-white rounded-2xl p-3 text-center shadow-sm"><p class="text-2xl font-black text-orange-500 leading-none" id="d-pend">0</p><p class="text-xs text-gray-400 mt-1 font-semibold">Pend.</p></div>
+<div class="bg-white rounded-2xl p-3 text-center shadow-sm"><p class="text-2xl font-black text-yellow-600 leading-none" id="d-round">1</p><p class="text-xs text-gray-400 mt-1 font-semibold">Ronda</p></div>
+</div>
+<div id="tour-banner" style="display:none" class="no-print">
+<div class="banner-gold"></div>
+<div class="banner-inner" id="banner-inner"></div>
+<div class="banner-dots" id="banner-dots"></div>
+<button id="banner-ad-btn" onclick="app.openAdManager()" title="Gestionar publicidad" style="position:absolute;top:12px;right:14px;z-index:4;font-size:18px;background:rgba(0,0,0,.25);border:none;cursor:pointer;color:rgba(255,255,255,.4);padding:5px 10px;border-radius:10px;line-height:1;transition:color .2s,background .2s;backdrop-filter:blur(4px)">📢</button>
+</div>
+<div class="flex gap-1 mb-4 overflow-x-auto pb-1 no-print">
+<button class="px-3 py-2 rounded-xl font-bold text-sm whitespace-nowrap bg-blue-100 text-blue-700 flex items-center gap-1.5" id="tab-bracket" onclick="app.showTab('bracket')">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="ico ico-float"><path d="M6 2h12v7a6 6 0 01-12 0V2z"/><path d="M6 5H2v2a4 4 0 004 4"/><path d="M18 5h4v2a4 4 0 01-4 4"/><line x1="12" y1="15" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>Bracket</button>
+<button class="px-3 py-2 rounded-xl font-bold text-sm whitespace-nowrap bg-white text-gray-600 flex items-center gap-1.5" id="tab-matches" onclick="app.showTab('matches')">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>Partidos</button>
+<button class="px-3 py-2 rounded-xl font-bold text-sm whitespace-nowrap bg-white text-gray-600 flex items-center gap-1.5" id="tab-standings" onclick="app.showTab('standings')">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="3" y1="15" x2="21" y2="15"/><line x1="12" y1="3" x2="12" y2="21"/></svg>Posiciones</button>
+<button class="px-3 py-2 rounded-xl font-bold text-sm whitespace-nowrap bg-white text-gray-600 flex items-center gap-1.5" id="tab-players" onclick="app.showTab('players')">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>Jugadores</button>
+<button class="px-3 py-2 rounded-xl font-bold text-sm whitespace-nowrap bg-white text-gray-600 flex items-center gap-1.5" id="tab-stats" onclick="app.showTab('stats')">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>Stats</button>
+</div>
+<div id="tc-bracket"><div class="bg-white rounded-2xl shadow-sm p-5 overflow-hidden"><div class="text-center"><img id="bracket-tour-logo" src="" alt=""></div><h3 class="font-black text-gray-900 mb-4 flex items-center gap-2"><span class="ico-badge ico-gold"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" class="ico-glow"><path d="M6 2h12v7a6 6 0 01-12 0V2z"/><path d="M6 5H2v2a4 4 0 004 4"/><path d="M18 5h4v2a4 4 0 01-4 4"/><line x1="12" y1="15" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></span>Cuadro del Torneo</h3><div class="bwrap"><div class="brow" id="bracket-wrap"></div></div></div></div>
+<div id="tc-matches" style="display:none"><div id="matches-list"></div></div>
+<div id="tc-standings" style="display:none"><div class="bg-white rounded-2xl shadow-sm overflow-hidden"><div class="p-4 border-b border-gray-100"><h3 class="font-black text-gray-900">Tabla de Posiciones</h3></div><div class="overflow-x-auto"><table class="ltable" id="standings-table"></table></div></div></div>
+<div id="tc-players" style="display:none"><div id="players-list"></div></div>
+<div id="tc-stats" style="display:none"><div class="grid md:grid-cols-2 gap-4"><div class="bg-white rounded-2xl shadow-sm p-5"><h3 class="font-black text-gray-900 mb-4">🔥 Ranking</h3><div id="top-list"></div></div><div class="bg-white rounded-2xl shadow-sm p-5"><h3 class="font-black text-gray-900 mb-4">📊 General</h3><div id="gen-stats"></div></div></div></div>
+</div>
+</main>
+
+<!-- NAVIGATION -->
+<nav class="md:hidden fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-md border-t border-gray-200/80 z-50 no-print shadow-2xl">
+<div class="flex justify-around py-2">
+<button onclick="app.sv('config')" id="bn-config" class="flex flex-col items-center gap-1 px-5 py-1 text-blue-600">
+<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06-.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+<span class="text-[10px] font-bold">Config</span>
+</button>
+<button onclick="app.sv('register')" id="bn-register" class="flex flex-col items-center gap-1 px-5 py-1 text-gray-400">
+<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+<span class="text-[10px] font-bold">Equipos</span>
+</button>
+<button onclick="app.sv('dash')" id="bn-dash" class="flex flex-col items-center gap-1 px-5 py-1 text-gray-400">
+<svg width="22" height="22" viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><ellipse cx="22" cy="17" rx="11" ry="13"/><line x1="22" y1="30" x2="22" y2="42"/><line x1="15" y1="42" x2="29" y2="42"/><line x1="22" y1="4" x2="22" y2="30" stroke-width="1.5" stroke-opacity=".55"/></svg>
+<span class="text-[10px] font-bold">Torneo</span>
+</button>
+</div>
+</nav>
+
+<!-- MODALS -->
+<div id="gen-loader">
+<div class="gl-content">
+<div class="gl-title">Generando Torneo</div>
+<div class="gl-sub">Preparando el cuadro...</div>
+<div class="gl-bar-track"><div class="gl-bar-fill" id="gl-bar"></div></div>
+<div class="gl-pct" id="gl-pct">0%</div>
+<div class="gl-msg" id="gl-msg">—</div>
+</div>
+<button class="gl-skip" onclick="app.skipLoader()">
+<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="13 19 22 12 13 5 13 19"/><polygon points="2 19 11 12 2 5 2 19"/></svg>Saltar
+</button>
+</div>
+
+<div id="m-add" style="display:none" class="fixed inset-0 bg-black/55 z-[8000] flex items-center justify-center p-4 backdrop-blur-sm" onclick="if(event.target===this)app.closeAdd()">
+<div class="bg-white rounded-2xl p-5 w-full max-w-sm max-h-[92vh] overflow-y-auto shadow-2xl manim">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-lg font-black text-gray-900 flex items-center gap-2.5" id="add-title"><span class="ico-badge ico-blue"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M16 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" y1="8" x2="20" y2="14"/><line x1="17" y1="11" x2="23" y2="11"/></svg></span>Nuevo Equipo</h3>
+<button onclick="app.closeAdd()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center ico-hscale"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+</div>
+<div id="add-body" class="space-y-3"></div>
+<div class="flex gap-2 mt-4">
+<button onclick="app.closeAdd()" class="flex-1 border-2 border-gray-200 text-gray-600 font-bold py-2.5 rounded-xl hover:bg-gray-50 transition-all flex items-center justify-center gap-1.5"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Cancelar</button>
+<button onclick="app.submitAdd()" class="flex-1 bg-blue-600 text-white font-black py-2.5 rounded-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-1.5" id="add-ok"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Agregar</button>
+</div>
+</div>
+</div>
+
+<div id="m-autofill" style="display:none" class="fixed inset-0 bg-black/55 z-[8000] flex items-center justify-center p-4 backdrop-blur-sm" onclick="if(event.target===this)app.closeAutoFill()">
+<div class="bg-white rounded-2xl p-5 w-full max-w-xs shadow-2xl manim">
+<h3 class="text-lg font-black text-gray-900 mb-1 flex items-center gap-2.5"><span class="ico-badge ico-purple"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5z"/></svg></span>Auto-llenar</h3>
+<p class="text-sm text-gray-400 mb-4" id="af-hint">Agrega equipos ficticios</p>
+<div class="mb-4">
+<label class="block text-xs font-bold text-gray-500 uppercase tracking-widest mb-2">¿Cuántos equipos en total?</label>
+<input type="number" id="af-count" min="4" max="200" value="8" class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 font-black text-gray-700 text-center focus:border-blue-500 outline-none text-2xl">
+<p class="text-xs text-gray-400 mt-1 text-center">Mínimo 4 · Máximo 200</p>
+</div>
+<div class="flex gap-2">
+<button onclick="app.closeAutoFill()" class="flex-1 border-2 border-gray-200 text-gray-600 font-bold py-2.5 rounded-xl hover:bg-gray-50 transition-all flex items-center justify-center gap-1.5"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Cancelar</button>
+<button onclick="app.runAutoFill()" class="flex-1 bg-blue-600 text-white font-black py-2.5 rounded-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-1.5"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 2l1.5 4.5L18 8l-4.5 1.5L12 14l-1.5-4.5L6 8l4.5-1.5z"/></svg>Llenar</button>
+</div>
+</div>
+</div>
+
+<div id="m-score" style="display:none" class="fixed inset-0 bg-black/55 z-[8000] flex items-center justify-center p-4 backdrop-blur-sm" onclick="if(event.target===this)app.closeScore()">
+<div class="bg-white rounded-2xl p-5 w-full max-w-sm max-h-[92vh] overflow-y-auto shadow-2xl manim">
+<div class="flex justify-between items-center mb-3">
+<div class="flex items-center gap-2"><h3 class="text-lg font-black text-gray-900">Resultado</h3><span id="score-badge" class="bg-orange-100 text-orange-600 text-xs font-bold px-2 py-0.5 rounded-full">Pendiente</span></div>
+<div class="flex items-center gap-2"><span id="score-timer" class="font-mono text-sm font-black text-blue-600 tabular-nums">00:00</span><button onclick="app.closeScore()" class="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center ico-hscale"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button></div>
+</div>
+<div id="score-teams" class="flex justify-between items-center mb-4 p-3 bg-slate-50 rounded-xl"></div>
+<form onsubmit="app.saveScore(event)" class="space-y-3">
+<div id="score-hdr" class="grid gap-2 text-center text-xs font-bold text-gray-400"></div>
+<div id="score-t1" class="grid gap-2"></div>
+<div id="score-t2" class="grid gap-2"></div>
+<div id="tiebreak-zone" style="display:none;margin-top:12px;padding:12px;background:#fef3c7;border-radius:10px;border:2px dashed #f59e0b">
+<p style="font-size:11px;font-weight:700;color:#92400e;margin-bottom:8px;text-align:center">🎾 Puntos del Tie-Break</p>
+<div style="display:grid;grid-template-columns:1fr auto 1fr;gap:8px;align-items:center">
+<input type="number" id="tb-p1" min="0" max="99" class="border-2 border-gray-200 rounded-xl py-2 font-black text-center text-gray-700 text-lg focus:border-yellow-500 outline-none" placeholder="Puntos T1">
+<span style="font-weight:900;color:#92400e">-</span>
+<input type="number" id="tb-p2" min="0" max="99" class="border-2 border-gray-200 rounded-xl py-2 font-black text-center text-gray-700 text-lg focus:border-yellow-500 outline-none" placeholder="Puntos T2">
+</div>
+<p style="font-size:9px;color:#92400e;margin-top:6px;text-align:center">Debe haber diferencia de 2 puntos (ej: 7-5, 10-8)</p>
+</div>
+<button type="submit" class="w-full bg-gradient-to-r from-blue-800 to-blue-500 text-white font-black py-3 rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>Guardar Resultado</button>
+</form>
+</div>
+</div>
+
+<div id="m-confirm" style="display:none" class="fixed inset-0 bg-black/55 z-[8000] flex items-center justify-center p-4 backdrop-blur-sm" onclick="if(event.target===this)app.closeConfirm()">
+<div class="bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl manim">
+<div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4 ico-float"><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2" stroke-linecap="round"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg></div>
+<h3 class="text-xl font-black text-gray-900 text-center mb-1 tracking-tight">¡Torneo Creado!</h3>
+<p class="text-sm text-gray-400 text-center mb-4" id="cfm-sub">—</p>
+<div id="cfm-rows" class="space-y-1 mb-5"></div>
+<button onclick="app.closeConfirm()" class="w-full bg-gradient-to-r from-blue-800 to-blue-500 text-white font-black py-3 rounded-xl hover:shadow-lg transition-all flex items-center justify-center gap-2"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" class="ico ico-glow"><path d="M6 2h12v7a6 6 0 01-12 0V2z"/><path d="M6 5H2v2a4 4 0 004 4"/><path d="M18 5h4v2a4 4 0 01-4 4"/><line x1="12" y1="15" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg>Ver Bracket</button>
+</div>
+</div>
+
+<div id="m-share" style="display:none" class="fixed inset-0 bg-black/55 z-[8000] flex items-center justify-center p-4 backdrop-blur-sm" onclick="if(event.target===this)app.closeShare()">
+<div class="bg-white rounded-2xl p-5 w-full max-w-sm shadow-2xl manim">
+<h3 class="text-lg font-black text-gray-900 mb-3 flex items-center gap-2.5"><span class="ico-badge ico-purple"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></span>Compartir Torneo</h3>
+<div id="share-url" class="bg-slate-50 border border-gray-200 rounded-xl p-3 text-xs text-gray-500 mb-3 cursor-pointer break-all hover:bg-slate-100 transition-all" onclick="app.copyShare()">Generando...</div>
+<button onclick="app.copyShare()" class="w-full bg-blue-600 text-white font-black py-2.5 rounded-xl hover:bg-blue-700 transition-all mb-2 flex items-center justify-center gap-2"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copiar enlace</button>
+<button onclick="app.closeShare()" class="w-full border-2 border-gray-200 text-gray-600 font-bold py-2.5 rounded-xl hover:bg-gray-50 flex items-center justify-center gap-1.5"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Cerrar</button>
+</div>
+</div>
+
+<div id="m-history" style="display:none" class="fixed inset-0 bg-black/55 z-[8000] flex items-center justify-center p-4 backdrop-blur-sm" onclick="if(event.target===this)app.closeHistory()">
+<div class="bg-white rounded-2xl p-5 w-full max-w-lg max-h-[85vh] overflow-y-auto shadow-2xl manim">
+<div class="flex justify-between items-center mb-4">
+<h3 class="text-lg font-black text-gray-900 flex items-center gap-2.5"><span class="ico-badge ico-blue"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 102.13-9.36L1 10"/><polyline points="12 7 12 12 16 14"/></svg></span>Historial</h3>
+<button onclick="app.closeHistory()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center ico-hscale"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+</div>
+<div id="hist-list"><p class="text-center py-8 text-sm text-gray-400">No hay torneos guardados</p></div>
+</div>
+</div>
+
+<div id="m-name" style="display:none" class="fixed inset-0 bg-black/55 z-[8000] flex items-center justify-center p-4 backdrop-blur-sm" onclick="if(event.target===this)app.closeNameM()">
+<div class="bg-white rounded-2xl p-5 w-full max-w-sm shadow-2xl manim">
+<h3 class="text-lg font-black text-gray-900 mb-4 flex items-center gap-2"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="1.9" stroke-linecap="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Nombre del Torneo</h3>
+<input type="text" id="name-inp" class="w-full border-2 border-gray-200 rounded-xl px-4 py-3 text-gray-700 focus:border-blue-500 outline-none mb-4 font-bold" placeholder="Ej: Copa Verano 2025" maxlength="40">
+<div class="flex gap-2">
+<button onclick="app.closeNameM()" class="flex-1 border-2 border-gray-200 text-gray-600 font-bold py-2.5 rounded-xl hover:bg-gray-50 flex items-center justify-center gap-1.5"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Cancelar</button>
+<button onclick="app.saveName()" class="flex-1 bg-blue-600 text-white font-black py-2.5 rounded-xl hover:bg-blue-700 flex items-center justify-center gap-1.5"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Guardar</button>
+</div>
+</div>
+</div>
+
+<div id="champ" onclick="this.style.display='none'">
+<div class="champ-card">
+<div class="champ-trophy"><svg width="72" height="72" viewBox="0 0 24 24" fill="none" stroke="#92400e" stroke-width="1.6" stroke-linecap="round" class="ico ico-glow"><path d="M6 2h12v7a6 6 0 01-12 0V2z"/><path d="M6 5H2v2a4 4 0 004 4"/><path d="M18 5h4v2a4 4 0 01-4 4"/><line x1="12" y1="15" x2="12" y2="22"/><line x1="8" y1="22" x2="16" y2="22"/></svg></div>
+<h2 class="text-3xl font-black mt-3 tracking-tight" style="color:#92400e">¡CAMPEÓN!</h2>
+<p class="text-xl font-bold mt-2" style="color:#78350f" id="champ-name">—</p>
+<p class="text-sm mt-4" style="color:#92400e;opacity:.55">Toca para cerrar</p>
+</div>
+</div>
+
+<div id="m-ads" style="display:none" class="fixed inset-0 bg-black/55 z-[8000] flex items-center justify-center p-4 backdrop-blur-sm" onclick="if(event.target===this)app.closeAdManager()">
+<div class="bg-white rounded-2xl p-5 w-full max-w-sm max-h-[88vh] overflow-y-auto shadow-2xl manim">
+<div class="flex justify-between items-center mb-1">
+<h3 class="text-lg font-black text-gray-900 flex items-center gap-2"><span class="ico-badge ico-gold"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></span>Publicidad en Banner</h3>
+<button onclick="app.closeAdManager()" class="w-8 h-8 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center ico-hscale"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
+</div>
+<p class="text-xs text-gray-400 mb-4">Los anuncios rotan junto con las noticias del torneo</p>
+<div class="bg-blue-50 rounded-xl p-3 mb-4 border border-blue-100">
+<p class="text-xs font-black text-blue-700 uppercase tracking-widest mb-3">Nuevo Anuncio</p>
+<div class="space-y-2">
+<div><label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Texto del anuncio</label>
+<input type="text" id="ad-text" class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm font-medium text-gray-700 focus:border-blue-500 outline-none" placeholder="Ej: Patrocinan este torneo..." maxlength="80"></div>
+<div><label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">URL destino (opcional)</label>
+<input type="url" id="ad-url" class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm font-medium text-gray-700 focus:border-blue-500 outline-none" placeholder="https://..."></div>
+<div><label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Logo / GIF / Video</label>
+<div class="flex items-center gap-3">
+<div id="ad-logo-prev" style="min-width:44px;max-width:120px;height:44px;border-radius:8px;background:#f1f5f9;border:1px solid #e2e8f0;display:flex;align-items:center;justify-content:center;overflow:hidden;flex-shrink:0">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.7" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
+</div>
+<div style="flex:1">
+<input type="file" id="ad-logo-file" accept="image/*,image/gif,video/mp4,video/webm,video/*" style="display:none" onchange="app._previewAdLogo()">
+<button type="button" onclick="document.getElementById('ad-logo-file').click()" class="text-xs bg-white border border-gray-200 text-gray-600 font-bold px-3 py-1.5 rounded-lg hover:bg-gray-50 transition-all flex items-center gap-1.5">Subir imagen / GIF</button>
+<p class="text-xs text-gray-400 mt-1">JPG · PNG · GIF · MP4</p>
+<p class="text-xs text-gray-400" id="ad-logo-info" style="display:none"></p>
+</div>
+</div></div>
+<div><label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Subtítulo (opcional)</label>
+<input type="text" id="ad-subtext" class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm font-medium text-gray-700 focus:border-blue-500 outline-none" placeholder="Ej: Patrocinador oficial" maxlength="60"></div>
+<div><label class="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-1">Emoji (opcional)</label>
+<input type="text" id="ad-emoji" class="w-full border-2 border-gray-200 rounded-xl px-3 py-2 text-sm font-medium text-gray-700 focus:border-blue-500 outline-none" placeholder="🏆 🎾 ⭐" maxlength="4" value="📣"></div>
+<button onclick="app.saveAd()" class="w-full bg-blue-600 text-white font-black py-2.5 rounded-xl hover:bg-blue-700 transition-all flex items-center justify-center gap-1.5">+ Agregar Anuncio</button>
+</div>
+</div>
+<div id="ad-list"></div>
+</div>
+</div>
+
+<div id="toast"></div>
+<canvas id="confetti"></canvas>
+
+<!-- JAVASCRIPT MODULES -->
+<script src="js/security/Sanitizer.js"></script>
+<script src="js/scoring/ScoringEngine.js"></script>
+<script src="js/formats/AmericanoFormat.js"></script>
+<script src="js/formats/MexicanoFormat.js"></script>
+<script src="js/formats/SwissFormat.js"></script>
+<script src="js/storage/VersionedStorage.js"></script>
+<script src="js/app.js"></script>
 </body>
 </html>
