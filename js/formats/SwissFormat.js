@@ -1,327 +1,214 @@
 /**
- * ============================================
- * FORMATO SUIZO - DUTCH PAIRING SYSTEM
- * ============================================
+ * SwissFormat.js - Formato Suizo (Dutch Pairing)
  * Sin eliminación, emparejamiento por récord
- * No repetir oponentes
- * Versión: 2.0
  */
 
 const SwissFormat = {
     /**
-     * Configuración por defecto
-     */
-    config: {
-        minPlayers: 4,
-        roundsFormula: 'log2(n)+1'
-    },
-
-    /**
      * Genera partidos para formato Suizo
-     * @param {array} teams - Array de equipos
-     * @param {object} tournamentConfig - Configuración del torneo
-     * @returns {array} - Array de partidos generados
+     * @param {array} teams - Equipos registrados
+     * @param {object} config - Configuración del torneo
+     * @returns {array} - Partidos generados
      */
-    generateMatches(teams, tournamentConfig) {
+    generateMatches(teams, config) {
         const matches = [];
-        const numTeams = teams.length;
-        
-        if (numTeams < this.config.minPlayers) {
-            return matches;
-        }
-        
-        // Calcular número de rondas: log₂(n) + 1
-        const numRounds = Math.ceil(Math.log2(numTeams)) + 1;
-        let matchId = 0;
-        
-        // Estado de cada equipo (puntos, oponentes previos)
-        let teamState = teams.map(t => ({
-            ...t,
+        const numRounds = Math.ceil(Math.log2(teams.length)) + 1;
+
+        // Inicializar estado de cada equipo
+        const teamState = teams.map(t => ({
+            id: t.id,
+            name: t.name,
             points: 0,
-            opponents: [], // IDs de oponentes previos
-            matchesPlayed: 0
+            matchesPlayed: 0,
+            opponents: [] // Historial de oponentes
         }));
-        
+
         for (let round = 0; round < numRounds; round++) {
-            // Ordenar por puntos (ranking actual)
+            // Ordenar por puntos (Dutch pairing)
             teamState.sort((a, b) => {
                 if (b.points !== a.points) return b.points - a.points;
                 return b.matchesPlayed - a.matchesPlayed;
             });
-            
-            // Emparejar usando Dutch Pairing
-            const roundMatches = this.dutchPairing(teamState, matchId, round, tournamentConfig);
-            matches.push(...roundMatches);
-            matchId += roundMatches.length;
-            
-            // Actualizar estado (oponentes)
-            roundMatches.forEach(match => {
-                if (!match.isBye && match.t1[0] && match.t2[0]) {
-                    const t1 = teamState.find(t => t.id === match.t1[0]);
-                    const t2 = teamState.find(t => t.id === match.t2[0]);
-                    if (t1) t1.opponents.push(match.t2[0]);
-                    if (t2) t2.opponents.push(match.t1[0]);
-                }
-            });
-        }
-        
-        return matches;
-    },
 
-    /**
-     * Dutch Pairing System - Emparejamiento por grupos de puntuación
-     * @param {array} teams - Equipos con estado actual
-     * @param {number} startId - ID inicial de partido
-     * @param {number} round - Número de ronda
-     * @param {object} config - Configuración del torneo
-     * @returns {array} - Partidos generados
-     */
-    dutchPairing(teams, startId, round, config) {
-        const matches = [];
-        const numCourts = config.numCourts || 2;
-        const used = new Set();
-        
-        // Agrupar por puntuación
-        const scoreGroups = {};
-        teams.forEach(t => {
-            if (!used.has(t.id)) {
-                const score = t.points;
-                if (!scoreGroups[score]) scoreGroups[score] = [];
-                scoreGroups[score].push(t);
-            }
-        });
-        
-        // Ordenar grupos de mayor a menor puntuación
-        const sortedScores = Object.keys(scoreGroups).sort((a, b) => b - a);
-        
-        // Emparejar dentro de cada grupo
-        sortedScores.forEach(score => {
-            const group = scoreGroups[score];
-            
-            for (let i = 0; i < group.length; i += 2) {
-                if (i + 1 < group.length) {
-                    const team1 = group[i];
-                    const team2 = group[i + 1];
-                    
-                    // Verificar que no se hayan enfrentado antes
-                    if (!team1.opponents.includes(team2.id)) {
-                        matches.push({
-                            id: `sw_r${round}_m${startId + matches.length}`,
-                            round: round,
-                            matchNum: startId + matches.length,
-                            t1: [team1.id],
-                            t2: [team2.id],
-                            t1name: team1.name,
-                            t2name: team2.name,
-                            sets: [],
-                            done: false,
-                            winner: null,
-                            court: ((matches.length % numCourts) + 1),
-                            isBye: false,
-                            autoAdv: false,
-                            formatType: 'swiss',
-                            scoreGroup: parseInt(score)
-                        });
-                        
-                        used.add(team1.id);
-                        used.add(team2.id);
+            const paired = new Set();
+            const roundMatches = [];
+
+            // Emparejar equipos con mismo/near récord
+            for (let i = 0; i < teamState.length - 1; i++) {
+                if (paired.has(i)) continue;
+
+                let opponent = -1;
+
+                // Buscar oponente no enfrentado con puntos similares
+                for (let j = i + 1; j < teamState.length; j++) {
+                    if (!paired.has(j)) {
+                        // Verificar que no se hayan enfrentado antes
+                        if (!teamState[i].opponents.includes(teamState[j].id)) {
+                            opponent = j;
+                            break;
+                        }
                     }
                 }
-            }
-        });
-        
-        // Si quedan equipos sin emparejar, intentar con grupo adyacente
-        const remaining = teams.filter(t => !used.has(t.id));
-        for (let i = 0; i < remaining.length; i += 2) {
-            if (i + 1 < remaining.length) {
-                const team1 = remaining[i];
-                const team2 = remaining[i + 1];
-                
-                if (!team1.opponents.includes(team2.id)) {
-                    matches.push({
-                        id: `sw_r${round}_m${startId + matches.length}`,
+
+                // Si no encuentra sin historial, permitir repetición (último recurso)
+                if (opponent === -1) {
+                    for (let j = i + 1; j < teamState.length; j++) {
+                        if (!paired.has(j)) {
+                            opponent = j;
+                            break;
+                        }
+                    }
+                }
+
+                if (opponent !== -1) {
+                    paired.add(i);
+                    paired.add(opponent);
+
+                    // Registrar enfrentamiento
+                    teamState[i].opponents.push(teamState[opponent].id);
+                    teamState[opponent].opponents.push(teamState[i].id);
+
+                    roundMatches.push({
+                        id: `sw_r${round}_m${roundMatches.length}`,
                         round: round,
-                        matchNum: startId + matches.length,
-                        t1: [team1.id],
-                        t2: [team2.id],
-                        t1name: team1.name,
-                        t2name: team2.name,
+                        matchNum: matches.length + roundMatches.length,
+                        t1: [teamState[i].id],
+                        t2: [teamState[opponent].id],
+                        t1name: teamState[i].name,
+                        t2name: teamState[opponent].name,
                         sets: [],
                         done: false,
                         winner: null,
-                        court: ((matches.length % numCourts) + 1),
+                        court: ((roundMatches.length % config.numCourts) + 1),
                         isBye: false,
-                        autoAdv: false,
-                        formatType: 'swiss',
-                        scoreGroup: -1
+                        isSwiss: true
                     });
-                    
-                    used.add(team1.id);
-                    used.add(team2.id);
                 }
             }
+
+            matches.push(...roundMatches);
         }
-        
+
         return matches;
     },
 
     /**
-     * Actualiza puntos después de un partido
-     * @param {string} winnerId - ID del ganador
-     * @param {string} loserId - ID del perdedor (puede ser null si empate)
-     * @param {array} teams - Estado de equipos
-     * @param {object} config - Configuración de puntos
+     * Actualiza standings después de partido Suizo
+     * @param {array} matches - Partidos
+     * @param {array} teams - Equipos
+     * @param {object} config - Configuración
+     * @returns {object} - Standings actualizados
      */
-    updatePoints(winnerId, loserId, teams, config) {
-        if (winnerId) {
-            const winner = teams.find(t => t.id === winnerId);
-            if (winner) {
-                winner.points += config.ptsWin || 3;
-                winner.matchesPlayed++;
-            }
-        }
-        
-        if (loserId) {
-            const loser = teams.find(t => t.id === loserId);
-            if (loser) {
-                loser.points += config.ptsLoss || 1;
-                loser.matchesPlayed++;
-            }
-        }
-    },
+    updateStandings(matches, teams, config) {
+        const standings = {};
 
-    /**
-     * Calcula standings para formato Suizo
-     * @param {array} matches - Partidos jugados
-     * @param {array} teams - Todos los equipos
-     * @param {object} config - Configuración de puntos
-     * @returns {array} - Standings ordenados
-     */
-    calculateStandings(matches, teams, config) {
-        const stats = {};
-        
-        // Inicializar stats
         teams.forEach(t => {
-            if (!t.isBye) {
-                stats[t.id] = {
-                    id: t.id,
-                    name: t.name,
-                    points: 0,
-                    matchesPlayed: 0,
-                    matchesWon: 0,
-                    matchesLost: 0,
-                    matchesDraw: 0,
-                    setsWon: 0,
-                    setsLost: 0,
-                    gamesWon: 0,
-                    gamesLost: 0,
-                    buchholz: 0 // Puntos de oponentes (tiebreaker suizo)
-                };
-            }
+            standings[t.id] = {
+                id: t.id,
+                name: t.name,
+                points: 0,
+                matchesPlayed: 0,
+                matchesWon: 0,
+                matchesDrawn: 0,
+                setsWon: 0,
+                setsLost: 0,
+                gamesWon: 0,
+                gamesLost: 0
+            };
         });
-        
-        // Procesar partidos
-        matches.filter(m => m.done && m.formatType === 'swiss' && !m.isBye).forEach(match => {
-            const winner = match.winner;
+
+        matches.filter(m => m.done && m.isSwiss).forEach(match => {
             const t1Id = match.t1[0];
             const t2Id = match.t2[0];
-            
-            if (stats[t1Id]) stats[t1Id].matchesPlayed++;
-            if (stats[t2Id]) stats[t2Id].matchesPlayed++;
-            
-            if (winner) {
-                const loser = winner === t1Id ? t2Id : t1Id;
-                const winnerId = winner;
-                
-                if (stats[winnerId]) {
-                    stats[winnerId].points += config.ptsWin || 3;
-                    stats[winnerId].matchesWon++;
+
+            if (standings[t1Id]) standings[t1Id].matchesPlayed++;
+            if (standings[t2Id]) standings[t2Id].matchesPlayed++;
+
+            if (match.winner) {
+                if (standings[match.winner]) {
+                    standings[match.winner].points += config.ptsWin || 3;
+                    standings[match.winner].matchesWon++;
                 }
-                if (stats[loser]) {
-                    stats[loser].points += config.ptsLoss || 1;
-                    stats[loser].matchesLost++;
+                const loser = match.t1.includes(match.winner) ? t2Id : t1Id;
+                if (standings[loser]) {
+                    standings[loser].points += config.ptsLoss || 1;
                 }
-            } else if (config.ptsDraw) {
-                if (stats[t1Id]) {
-                    stats[t1Id].points += config.ptsDraw;
-                    stats[t1Id].matchesDraw++;
+            } else if (ScoringEngine.allowsDraws('swiss')) {
+                // Empate permitido en Suizo
+                if (standings[t1Id]) {
+                    standings[t1Id].points += config.ptsDraw || 2;
+                    standings[t1Id].matchesDrawn++;
                 }
-                if (stats[t2Id]) {
-                    stats[t2Id].points += config.ptsDraw;
-                    stats[t2Id].matchesDraw++;
+                if (standings[t2Id]) {
+                    standings[t2Id].points += config.ptsDraw || 2;
+                    standings[t2Id].matchesDrawn++;
                 }
             }
-            
-            // Procesar sets y games
+
             match.sets.forEach(set => {
                 if (set.length >= 2) {
-                    if (stats[t1Id]) {
-                        stats[t1Id].setsWon += set[0] > set[1] ? 1 : 0;
-                        stats[t1Id].setsLost += set[1] > set[0] ? 1 : 0;
-                        stats[t1Id].gamesWon += set[0];
-                        stats[t1Id].gamesLost += set[1];
+                    if (standings[t1Id]) {
+                        standings[t1Id].setsWon += set[0] > set[1] ? 1 : 0;
+                        standings[t1Id].setsLost += set[0] < set[1] ? 1 : 0;
+                        standings[t1Id].gamesWon += set[0];
+                        standings[t1Id].gamesLost += set[1];
                     }
-                    if (stats[t2Id]) {
-                        stats[t2Id].setsWon += set[1] > set[0] ? 1 : 0;
-                        stats[t2Id].setsLost += set[0] > set[1] ? 1 : 0;
-                        stats[t2Id].gamesWon += set[1];
-                        stats[t2Id].gamesLost += set[0];
+                    if (standings[t2Id]) {
+                        standings[t2Id].setsWon += set[1] > set[0] ? 1 : 0;
+                        standings[t2Id].setsLost += set[1] < set[0] ? 1 : 0;
+                        standings[t2Id].gamesWon += set[1];
+                        standings[t2Id].gamesLost += set[0];
                     }
                 }
             });
         });
-        
-        // Calcular Buchholz (puntos de oponentes)
-        matches.filter(m => m.done && m.formatType === 'swiss').forEach(match => {
-            const t1Id = match.t1[0];
-            const t2Id = match.t2[0];
-            
-            if (stats[t1Id] && stats[t2Id]) {
-                stats[t1Id].buchholz += stats[t2Id].points || 0;
-                stats[t2Id].buchholz += stats[t1Id].points || 0;
-            }
-        });
-        
-        // Ordenar: puntos > buchholz > diferencia de games
-        return Object.values(stats).sort((a, b) => {
-            if (b.points !== a.points) return b.points - a.points;
-            if (b.buchholz !== a.buchholz) return b.buchholz - a.buchholz;
-            const gdA = a.gamesWon - a.gamesLost;
-            const gdB = b.gamesWon - b.gamesLost;
-            if (gdB !== gdA) return gdB - gdA;
-            return b.matchesWon - a.matchesWon;
-        });
+
+        return standings;
     },
 
     /**
-     * Genera HTML para tabla de posiciones de Suizo
-     * @param {array} standings - Standings ordenados
-     * @returns {string} - HTML de la tabla
+     * Genera tabla de posiciones para Suizo
+     * @param {object} standings - Standings
+     * @returns {string} - HTML de tabla
      */
-    generateStandingsHTML(standings) {
-        let html = `<thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>PG</th><th>PP</th><th>PE</th><th>Pts</th><th>Buchholz</th></tr></thead><tbody>`;
-        
-        standings.forEach((team, index) => {
-            const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `<b style="color:#64748b">${index + 1}</b>`;
-            
-            html += `<tr>
-                <td>${medal}</td>
-                <td><div style="display:flex;align-items:center;gap:6px">
-                    <span style="font-weight:700;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${Sanitizer.text(team.name)}</span>
-                </div></td>
-                <td>${team.matchesPlayed}</td>
-                <td style="color:#15803d;font-weight:700">${team.matchesWon}</td>
-                <td style="color:#dc2626">${team.matchesLost}</td>
-                <td>${team.matchesDraw || 0}</td>
-                <td style="font-weight:900;font-size:15px">${team.points}</td>
-                <td style="color:#64748b">${team.buchholz}</td>
-            </tr>`;
+    renderStandings(standings) {
+        const arr = Object.values(standings).sort((a, b) => {
+            if (b.points !== a.points) return b.points - a.points;
+            if (b.matchesWon !== a.matchesWon) return b.matchesWon - a.matchesWon;
+            return (b.gamesWon - b.gamesLost) - (a.gamesWon - a.gamesLost);
         });
-        
-        html += '</tbody>';
-        return html;
+
+        const header = `
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Equipo</th>
+                    <th>PJ</th>
+                    <th>PG</th>
+                    <th>PE</th>
+                    <th>PP</th>
+                    <th>Pts</th>
+                </tr>
+            </thead>
+        `;
+
+        const rows = arr.map((s, i) => `
+            <tr>
+                <td>${i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : i + 1}</td>
+                <td style="font-weight:700">${Sanitizer.text(s.name)}</td>
+                <td>${s.matchesPlayed}</td>
+                <td style="color:#15803d;font-weight:700">${s.matchesWon}</td>
+                <td>${s.matchesDrawn || 0}</td>
+                <td style="color:#dc2626">${s.matchesPlayed - s.matchesWon - (s.matchesDrawn || 0)}</td>
+                <td style="font-weight:900;font-size:15px">${s.points}</td>
+            </tr>
+        `).join('');
+
+        return `<table class="ltable">${header}<tbody>${rows}</tbody></table>`;
     }
 };
 
-// Exportar para uso global
-window.SwissFormat = SwissFormat;
+// Exportar
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = SwissFormat;
+}
